@@ -84,8 +84,8 @@ namespace GogGalaxy20MetaManager
 						continue;
 
 					var isVisible = db.GamePieces.Where(p => p.ReleaseKey == meta.ReleaseKey && p.GamePieceTypeId == GamePieceType.IsVisibleInLibrary).Select(p => p.Value).FirstOrDefault();
-					if (string.IsNullOrEmpty(isVisible)
-						|| JsonConvert.DeserializeObject<GamePiecesIsVisibleInLibrary>(isVisible).IsVisibleInLibrary != true)
+					if (!string.IsNullOrEmpty(isVisible)
+						&& JsonConvert.DeserializeObject<GamePiecesIsVisibleInLibrary>(isVisible).IsVisibleInLibrary == false)
 						continue;
 
 					var isDlc = db.GamePieces.Where(p => p.ReleaseKey == meta.ReleaseKey && p.GamePieceTypeId == GamePieceType.IsDlc).Select(p => p.Value).FirstOrDefault();
@@ -128,61 +128,69 @@ namespace GogGalaxy20MetaManager
 			}
 			Application.DoEvents();
 
-			var imgFactory = new ImageProcessor.ImageFactory();
-			var rootFolder = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-			galaxyRootPath = Path.Combine(rootFolder, "GOG.com", "Galaxy", "webcache", userId.ToString());
-			progressBar1.Style = ProgressBarStyle.Continuous;
-			progressBar1.Maximum = titles.Count;
-			foreach (var title in titles.OrderBy(kvp => kvp.Value))
+			using (var imgFactory = new ImageProcessor.ImageFactory())
 			{
-				if (aborted)
-					break;
+				var rootFolder = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+				galaxyRootPath = Path.Combine(rootFolder, "GOG.com", "Galaxy", "webcache", userId.ToString());
+				progressBar1.Style = ProgressBarStyle.Continuous;
+				progressBar1.Maximum = titles.Count;
+				foreach (var title in titles.OrderBy(kvp => kvp.Value))
+				{
+					if (aborted)
+						break;
 
-				if (timer.Elapsed > timerThreshold)
-				{
-					timer.Restart();
-					Application.DoEvents();
-				}
-
-				var keyParts = title.Key.Split(Separator, 2);
-				var pictureBox = new PictureBox
-				{
-					SizeMode = PictureBoxSizeMode.Zoom,
-					Size = new Size(171, 241), // 342x482, ~5:7
-				};
-				pictureBox.Click += (s, args) =>
-									{
-										var editForm = new CoverEditForm(this, pictureBox, title.Key, userId)
-										{
-											Text = $"Editing \"{title.Value}\" ({keyParts[1]})",
-										};
-										var result = editForm.ShowDialog(this);
-									};
-				if (coverFilenames.TryGetValue(title.Key, out var filename))
-				{
-					var path = Path.Combine(galaxyRootPath, keyParts[0], keyParts[1], filename);
-					if (File.Exists(path))
-						using (var img = imgFactory.Load(path))
-							pictureBox.Image = (Image)img.Image.Clone();
-				}
-				if (pictureBox.Image == null)
-				{
-					var text = new TextLayer
+					if (timer.Elapsed > timerThreshold)
 					{
-						DropShadow = true,
-						FontColor = ForeColor,
-						FontSize = Font.Height*3,
-						Text = title.Value,
+						timer.Restart();
+						Application.DoEvents();
+					}
+
+					var keyParts = title.Key.Split(Separator, 2);
+					var pictureBox = new PictureBox
+					{
+						SizeMode = PictureBoxSizeMode.Zoom,
+						Size = new Size(171, 241), // 342x482, ~5:7
 					};
-					var bitmap = new Bitmap(342, 482);
-					using (var img = imgFactory.Load(bitmap)
-						.BackgroundColor(BackColor)
-						.Watermark(text))
-						pictureBox.Image = (Image)img.Image.Clone();
+					pictureBox.Click += (s, args) =>
+										{
+											var editForm = new CoverEditForm(this, pictureBox, title.Key, userId)
+											{
+												Text = $"Editing \"{title.Value}\" ({keyParts[1]})",
+											};
+											var result = editForm.ShowDialog(this);
+										};
+					if (coverFilenames.TryGetValue(title.Key, out var filename))
+					{
+						var path = Path.Combine(galaxyRootPath, keyParts[0], keyParts[1], filename);
+						if (File.Exists(path))
+							try
+							{
+								using (var img = imgFactory.Load(path))
+									pictureBox.Image = (Image)img.Image.Clone();
+							}
+							catch
+							{
+							}
+					}
+					if (pictureBox.Image == null)
+					{
+						var text = new TextLayer
+						{
+							DropShadow = true,
+							FontColor = ForeColor,
+							FontSize = Font.Height * 3,
+							Text = title.Value,
+						};
+						var bitmap = new Bitmap(342, 482);
+						using (var img = imgFactory.Load(bitmap)
+							.BackgroundColor(BackColor)
+							.Watermark(text))
+							pictureBox.Image = (Image)img.Image.Clone();
+					}
+					flowLayoutPanel1.Controls.Add(pictureBox);
+					toolTip1.SetToolTip(pictureBox, title.Value);
+					progressBar1.Value++;
 				}
-				flowLayoutPanel1.Controls.Add(pictureBox);
-				toolTip1.SetToolTip(pictureBox, title.Value);
-				progressBar1.Value++;
 			}
 			progressBar1.Visible = false;
 			UseWaitCursor = false;

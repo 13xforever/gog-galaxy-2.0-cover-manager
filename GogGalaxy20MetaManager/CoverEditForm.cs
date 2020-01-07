@@ -80,34 +80,54 @@ namespace GogGalaxy20MetaManager
 				galaxyCoverPicture.Image = pictureBox.Image;
 				var coverPath = Path.Combine(parent.steamRootPath, $"{keyParts[1]}_library_600x900.jpg");
 				if (File.Exists(coverPath))
-					using (var img = imgFactory.Load(coverPath).Resize(new ResizeLayer(new Size(342, 482), ResizeMode.Crop))) // 600x900
-						steamCoverPicture.Image = (Image)img.Image.Clone();
+					try
+					{
+						using (var img = imgFactory.Load(coverPath).Resize(new ResizeLayer(new Size(342, 482), ResizeMode.Crop))) // 600x900
+							steamCoverPicture.Image = (Image)img.Image.Clone();
+					}
+					catch { }
 
 				// banner 1600x650
 				if (!string.IsNullOrEmpty(bannerFilename))
 				{
 					bannerFilename = Path.Combine(galaxyCacheRoot, bannerFilename);
 					if (File.Exists(bannerFilename))
-						using (var img = imgFactory.Load(bannerFilename))
-							galaxyBackgroundPicture.Image = (Image)img.Image.Clone();
+						try
+						{
+							using (var img = imgFactory.Load(bannerFilename))
+								galaxyBackgroundPicture.Image = (Image)img.Image.Clone();
+						}
+						catch { }
 				}
 				var steamBannerPath = Path.Combine(parent.steamRootPath, $"{keyParts[1]}_library_hero.jpg");
 				if (File.Exists(steamBannerPath))
-					using (var img = imgFactory.Load(steamBannerPath).Resize(new ResizeLayer(new Size(1600, 650), ResizeMode.Crop))) // 1920x620
-						steamBackgroundPicture.Image = (Image)img.Image.Clone();
+					try
+					{
+						using (var img = imgFactory.Load(steamBannerPath).Resize(new ResizeLayer(new Size(1600, 650), ResizeMode.Crop))) // 1920x620
+							steamBackgroundPicture.Image = (Image)img.Image.Clone();
+					}
+					catch { }
 
 				// icon 112x112
 				if (!string.IsNullOrEmpty(iconFilename))
 				{
 					iconFilename = Path.Combine(galaxyCacheRoot, iconFilename);
 					if (File.Exists(iconFilename))
-						using (var img = imgFactory.Load(iconFilename))
-							galaxyIconPicture.Image = (Image)img.Image.Clone();
+						try
+						{
+							using (var img = imgFactory.Load(iconFilename))
+								galaxyIconPicture.Image = (Image)img.Image.Clone();
+						}
+						catch { }
 				}
 				var steamIconPath = Path.Combine(parent.steamRootPath, $"{keyParts[1]}_library_600x900.jpg");
 				if (File.Exists(steamIconPath))
-					using (var img = imgFactory.Load(steamIconPath).EntropyCrop().Resize(new ResizeLayer(new Size(112, 112), ResizeMode.Crop))) // 1920x620
-						steamIconPicture.Image = (Image)img.Image.Clone();
+					try
+					{
+						using (var img = imgFactory.Load(steamIconPath).EntropyCrop().Resize(new ResizeLayer(new Size(112, 112), ResizeMode.Crop))) // 1920x620
+							steamIconPicture.Image = (Image)img.Image.Clone();
+					}
+					catch { }
 			}
 			UseWaitCursor = false;
 		}
@@ -124,7 +144,8 @@ namespace GogGalaxy20MetaManager
 			var galaxyCacheRoot = Path.Combine(parent.galaxyRootPath, keyParts[0], keyParts[1]);
 			if (!Directory.Exists(galaxyCacheRoot))
 				Directory.CreateDirectory(galaxyCacheRoot);
-
+			const int defaultQuality = 90;
+			const bool deleteOldFiles = false;
 			using (var imgFactory = new ImageProcessor.ImageFactory())
 			{
 				if (steamCoverSelect.Checked)
@@ -133,7 +154,7 @@ namespace GogGalaxy20MetaManager
 					string filename;
 					using (var stream = new MemoryStream())
 					{
-						using (var img = imgFactory.Load(steamCoverPicture.Image).Format(new WebPFormat{Quality = 100}))
+						using (var img = imgFactory.Load(steamCoverPicture.Image).Format(new WebPFormat{Quality = defaultQuality}))
 							img.Save(stream);
 						stream.Seek(0, SeekOrigin.Begin);
 						using (var sha = SHA256.Create())
@@ -157,7 +178,12 @@ namespace GogGalaxy20MetaManager
 							});
 						}
 						else
+						{
+							var existingImg = Path.Combine(galaxyCacheRoot, existingCover.Filename);
+							if (deleteOldFiles && File.Exists(existingImg))
+								try { File.Delete(existingImg); } catch { }
 							existingCover.Filename = filename;
+						}
 						db.SaveChanges();
 					}
 				}
@@ -167,7 +193,7 @@ namespace GogGalaxy20MetaManager
 					string filename;
 					using (var stream = new MemoryStream())
 					{
-						using (var img = imgFactory.Load(steamBackgroundPicture.Image).Format(new WebPFormat{Quality = 100}))
+						using (var img = imgFactory.Load(steamBackgroundPicture.Image).Format(new WebPFormat{Quality = defaultQuality}))
 							img.Save(stream);
 						stream.Seek(0, SeekOrigin.Begin);
 						using (var sha = SHA256.Create())
@@ -179,8 +205,8 @@ namespace GogGalaxy20MetaManager
 					}
 					using (var db = new GalaxyDb())
 					{
-						var existingCover = db.WebCacheResources.FirstOrDefault(r => r.ReleaseKey == releaseKey && r.UserId == userId && r.WebCacheResourceTypeId == WebCacheResourceType.Background);
-						if (existingCover == null)
+						var existingBackground = db.WebCacheResources.FirstOrDefault(r => r.ReleaseKey == releaseKey && r.UserId == userId && r.WebCacheResourceTypeId == WebCacheResourceType.Background);
+						if (existingBackground == null)
 						{
 							db.WebCacheResources.Add(new WebCacheResources
 							{
@@ -191,7 +217,12 @@ namespace GogGalaxy20MetaManager
 							});
 						}
 						else
-							existingCover.Filename = filename;
+						{
+							var existingImg = Path.Combine(galaxyCacheRoot, existingBackground.Filename);
+							if (deleteOldFiles && File.Exists(existingImg))
+								try { File.Delete(existingImg); } catch { }
+							existingBackground.Filename = filename;
+						}
 						db.SaveChanges();
 					}
 				}
@@ -201,7 +232,7 @@ namespace GogGalaxy20MetaManager
 					string filename;
 					using (var stream = new MemoryStream())
 					{
-						using (var img = imgFactory.Load(steamIconPicture.Image).Format(new WebPFormat{Quality = 100}))
+						using (var img = imgFactory.Load(steamIconPicture.Image).Format(new WebPFormat{Quality = defaultQuality}))
 							img.Save(stream);
 						stream.Seek(0, SeekOrigin.Begin);
 						using (var sha = SHA256.Create())
@@ -213,8 +244,8 @@ namespace GogGalaxy20MetaManager
 					}
 					using (var db = new GalaxyDb())
 					{
-						var existingCover = db.WebCacheResources.FirstOrDefault(r => r.ReleaseKey == releaseKey && r.UserId == userId && r.WebCacheResourceTypeId == WebCacheResourceType.SquareIcon);
-						if (existingCover == null)
+						var existingIcon = db.WebCacheResources.FirstOrDefault(r => r.ReleaseKey == releaseKey && r.UserId == userId && r.WebCacheResourceTypeId == WebCacheResourceType.SquareIcon);
+						if (existingIcon == null)
 						{
 							db.WebCacheResources.Add(new WebCacheResources
 							{
@@ -225,7 +256,12 @@ namespace GogGalaxy20MetaManager
 							});
 						}
 						else
-							existingCover.Filename = filename;
+						{
+							var existingImg = Path.Combine(galaxyCacheRoot, existingIcon.Filename);
+							if (deleteOldFiles && File.Exists(existingImg))
+								try { File.Delete(existingImg); } catch { }
+							existingIcon.Filename = filename;
+						}
 						db.SaveChanges();
 					}
 				}

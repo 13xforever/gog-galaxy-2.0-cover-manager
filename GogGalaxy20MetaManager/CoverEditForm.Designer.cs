@@ -208,6 +208,7 @@
 			this.okButton.TabIndex = 21;
 			this.okButton.Text = "Update";
 			this.okButton.UseVisualStyleBackColor = true;
+			this.okButton.Click += new System.EventHandler(this.okButton_Click);
 			// 
 			// steamIconSelect
 			// 

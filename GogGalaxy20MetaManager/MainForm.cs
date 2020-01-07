@@ -28,7 +28,7 @@ namespace GogGalaxy20MetaManager
 		{
 			InitializeComponent();
 
-			OnPaint = UpdateColors;
+			OnPaint = () => UpdateColors(this);
 			if (RuntimeEnvironment.OperatingSystemPlatform == Platform.Windows
 				&& Version.TryParse(RuntimeEnvironment.OperatingSystemVersion, out var systemVersion)
 				&& systemVersion.Major == 10)
@@ -162,12 +162,8 @@ namespace GogGalaxy20MetaManager
 				{
 					var path = Path.Combine(galaxyRootPath, keyParts[0], keyParts[1], filename);
 					if (File.Exists(path))
-					{
 						using (var img = imgFactory.Load(path))
-						{
 							pictureBox.Image = (Image)img.Image.Clone();
-						}
-					}
 				}
 				if (pictureBox.Image == null)
 				{
@@ -192,23 +188,39 @@ namespace GogGalaxy20MetaManager
 			UseWaitCursor = false;
 		}
 
-		private void UpdateColors()
+		internal void UpdateColors(Form form)
 		{
 			if (uiSettings != null)
 			{
 				var foreground = uiSettings.GetColorValue(UIColorType.Foreground);
 				var background = uiSettings.GetColorValue(UIColorType.Background);
-				BackColor = Color.FromArgb(background.A, background.R, background.G, background.B);
-				ForeColor = Color.FromArgb(foreground.A, foreground.R, foreground.G, foreground.B);
+				form.BackColor = Color.FromArgb(background.A, background.R, background.G, background.B);
+				form.ForeColor = Color.FromArgb(foreground.A, foreground.R, foreground.G, foreground.B);
+
+				var frontWave = form.Controls.Cast<Control>().ToList();
+				var nextWave = new List<Control>();
+				while (frontWave.Count > 0)
+				{
+					nextWave.Clear();
+					foreach (var c in frontWave)
+					{
+						c.BackColor = BackColor;
+						c.ForeColor = ForeColor;
+						nextWave.AddRange(c.Controls.Cast<Control>());
+					}
+					var tmp = frontWave;
+					frontWave = nextWave;
+					nextWave = tmp;
+				}
 			}
 		}
 
-		private void Form1_SystemColorsChanged(object sender, EventArgs e) => UpdateColors();
-		private void MainForm_StyleChanged(object sender, EventArgs e) => UpdateColors();
+		private void Form1_SystemColorsChanged(object sender, EventArgs e) => UpdateColors(this);
+		private void MainForm_StyleChanged(object sender, EventArgs e) => UpdateColors(this);
 
 		private void Form1_Load(object sender, EventArgs e)
 		{
-			UpdateColors();
+			UpdateColors(this);
 			Form1_Resize(sender, EventArgs.Empty);
 		}
 

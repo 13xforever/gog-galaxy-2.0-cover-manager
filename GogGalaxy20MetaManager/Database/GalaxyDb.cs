@@ -24,10 +24,8 @@ namespace GogGalaxy20MetaManager
 			modelBuilder.Entity<WebCacheResources>().HasKey(r => new {r.ReleaseKey, r.WebCacheResourceTypeId, r.UserId });
 
 			foreach (var entity in modelBuilder.Model.GetEntityTypes())
-			{
-				foreach (var property in entity.GetProperties())
-					property.Relational().ColumnName = NamingStyles.CamelCase(property.Name);
-			}
+			foreach (var property in entity.GetProperties())
+				property.SetColumnName(NamingStyles.CamelCase(property.Name));
 		}
 	}
 }

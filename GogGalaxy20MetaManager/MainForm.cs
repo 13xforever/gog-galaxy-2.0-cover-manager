@@ -69,7 +69,7 @@ namespace GogGalaxy20MetaManager
 					throw new InvalidOperationException("Multi-user setups are not supported");
 
 				userId = db.Users.First().Id;
-				foreach (var meta in db.GamePieces.AsNoTracking().Where(p => p.UserId == userId && p.GamePieceTypeId == GamePieceType.Meta).ToList())
+				foreach (var meta in db.GamePieces.AsNoTracking().Where(p => p.UserId == userId && p.GamePieceTypeId == GamePieceType.Meta).ToListAsync().GetAwaiter().GetResult())
 				{
 					if (aborted)
 						break;
@@ -83,12 +83,12 @@ namespace GogGalaxy20MetaManager
 					if (!meta.ReleaseKey.StartsWith("steam_"))
 						continue;
 
-					var isVisible = db.GamePieces.Where(p => p.ReleaseKey == meta.ReleaseKey && p.GamePieceTypeId == GamePieceType.IsVisibleInLibrary).Select(p => p.Value).FirstOrDefault();
+					var isVisible = db.GamePieces.Where(p => p.ReleaseKey == meta.ReleaseKey && p.GamePieceTypeId == GamePieceType.IsVisibleInLibrary).Select(p => p.Value).FirstOrDefaultAsync().GetAwaiter().GetResult();
 					if (!string.IsNullOrEmpty(isVisible)
 						&& JsonConvert.DeserializeObject<GamePiecesIsVisibleInLibrary>(isVisible).IsVisibleInLibrary == false)
 						continue;
 
-					var isDlc = db.GamePieces.Where(p => p.ReleaseKey == meta.ReleaseKey && p.GamePieceTypeId == GamePieceType.IsDlc).Select(p => p.Value).FirstOrDefault();
+					var isDlc = db.GamePieces.Where(p => p.ReleaseKey == meta.ReleaseKey && p.GamePieceTypeId == GamePieceType.IsDlc).Select(p => p.Value).FirstOrDefaultAsync().GetAwaiter().GetResult();
 					if (!string.IsNullOrEmpty(isDlc)
 						&& JsonConvert.DeserializeObject<GamePiecesIsDlc>(isDlc).IsDlc == true)
 						continue;
@@ -96,8 +96,8 @@ namespace GogGalaxy20MetaManager
 					metaInfo[meta.ReleaseKey] = JsonConvert.DeserializeObject<GamePiecesMeta>(meta.Value);
 
 					// title
-					var title = db.GamePieces.FirstOrDefault(p => p.ReleaseKey == meta.ReleaseKey && p.GamePieceTypeId == GamePieceType.Title && p.Value != null)?.Value
-									?? db.GamePieces.FirstOrDefault(p => p.ReleaseKey == meta.ReleaseKey && p.GamePieceTypeId == GamePieceType.OriginalTitle && p.Value != null)?.Value;
+					var title = db.GamePieces.FirstOrDefaultAsync(p => p.ReleaseKey == meta.ReleaseKey && p.GamePieceTypeId == GamePieceType.Title && p.Value != null).GetAwaiter().GetResult()?.Value
+									?? db.GamePieces.FirstOrDefaultAsync(p => p.ReleaseKey == meta.ReleaseKey && p.GamePieceTypeId == GamePieceType.OriginalTitle && p.Value != null).GetAwaiter().GetResult()?.Value;
 					if (!string.IsNullOrEmpty(title))
 						title = JsonConvert.DeserializeObject<GamePiecesTitle>(title).Title;
 					if (string.IsNullOrEmpty(title))
@@ -109,7 +109,7 @@ namespace GogGalaxy20MetaManager
 			var coverFilenames = new Dictionary<string, string>(metaInfo.Count);
 			using (var db = new GalaxyDb())
 			{
-				foreach (var cover in db.WebCacheResources.AsNoTracking().Where(r => r.WebCacheResourceTypeId == WebCacheResourceType.VerticalCover))
+				foreach (var cover in db.WebCacheResources.AsNoTracking().Where(r => r.WebCacheResourceTypeId == WebCacheResourceType.VerticalCover).ToListAsync().GetAwaiter().GetResult())
 				{
 					if (aborted)
 						break;
@@ -128,12 +128,13 @@ namespace GogGalaxy20MetaManager
 			}
 			Application.DoEvents();
 
+			var pictureBoxList = new List<Control>(titles.Count);
 			using (var imgFactory = new ImageProcessor.ImageFactory())
 			{
 				var rootFolder = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
 				galaxyRootPath = Path.Combine(rootFolder, "GOG.com", "Galaxy", "webcache", userId.ToString());
 				progressBar1.Style = ProgressBarStyle.Continuous;
-				progressBar1.Maximum = titles.Count;
+				progressBar1.Maximum = titles.Count*2;
 				foreach (var title in titles.OrderBy(kvp => kvp.Value))
 				{
 					if (aborted)
@@ -187,10 +188,19 @@ namespace GogGalaxy20MetaManager
 							.Watermark(text))
 							pictureBox.Image = (Image)img.Image.Clone();
 					}
-					flowLayoutPanel1.Controls.Add(pictureBox);
+					pictureBoxList.Add(pictureBox);
 					toolTip1.SetToolTip(pictureBox, title.Value);
 					progressBar1.Value++;
 				}
+			}
+			var range = pictureBoxList.ToArray().AsSpan();
+			while (!range.IsEmpty)
+			{
+				Application.DoEvents();
+				var len = Math.Min(range.Length, 100);
+				flowLayoutPanel1.Controls.AddRange(range.Slice(0, len).ToArray());
+				range = range.Slice(len);
+				progressBar1.Value += len;
 			}
 			progressBar1.Visible = false;
 			UseWaitCursor = false;

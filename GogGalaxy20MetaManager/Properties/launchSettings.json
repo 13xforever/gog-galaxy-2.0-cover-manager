@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "GogGalaxy20MetaManager": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "COMPlus_GCLargePages": "1"
+      }
+    }
+  }
+}

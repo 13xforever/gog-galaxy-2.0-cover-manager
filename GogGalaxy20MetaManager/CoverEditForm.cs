@@ -60,15 +60,15 @@ namespace GogGalaxy20MetaManager
 			using (var db = new GalaxyDb())
 			{
 				bannerFilename = db.WebCacheResources
-					.Where(r => r.ReleaseKey == releaseKey
-								&& r.UserId == userId
+					.Where(r => r.WebCache.ReleaseKey == releaseKey
+								&& r.WebCache.UserId == userId
 								&& r.WebCacheResourceTypeId == WebCacheResourceType.Background
 					)
 					.Select(r => r.Filename)
 					.FirstOrDefault();
 				iconFilename = db.WebCacheResources
-					.Where(r => r.ReleaseKey == releaseKey
-								&& r.UserId == userId
+					.Where(r => r.WebCache.ReleaseKey == releaseKey
+								&& r.WebCache.UserId == userId
 								&& r.WebCacheResourceTypeId == WebCacheResourceType.SquareIcon
 					)
 					.Select(r => r.Filename)
@@ -166,13 +166,21 @@ namespace GogGalaxy20MetaManager
 					}
 					using (var db = new GalaxyDb())
 					{
-						var existingCover = db.WebCacheResources.FirstOrDefault(r => r.ReleaseKey == releaseKey && r.UserId == userId && r.WebCacheResourceTypeId == WebCacheResourceType.VerticalCover);
+						var existingCover = db.WebCacheResources.FirstOrDefault(r => r.WebCache.ReleaseKey == releaseKey && r.WebCache.UserId == userId && r.WebCacheResourceTypeId == WebCacheResourceType.VerticalCover);
 						if (existingCover == null)
 						{
+							var webCache = db.WebCache.FirstOrDefault(r => r.ReleaseKey == releaseKey && r.UserId == userId);
+							if (webCache == null)
+							{
+								webCache = db.Add(new WebCache
+								{
+									ReleaseKey = releaseKey,
+									UserId = userId,
+								}).Entity;
+							}
 							db.WebCacheResources.Add(new WebCacheResources
 							{
-								ReleaseKey = releaseKey,
-								UserId = userId,
+								WebCacheId = webCache.Id,
 								WebCacheResourceTypeId = WebCacheResourceType.VerticalCover,
 								Filename = filename,
 							});
@@ -205,16 +213,26 @@ namespace GogGalaxy20MetaManager
 					}
 					using (var db = new GalaxyDb())
 					{
-						var existingBackground = db.WebCacheResources.FirstOrDefault(r => r.ReleaseKey == releaseKey && r.UserId == userId && r.WebCacheResourceTypeId == WebCacheResourceType.Background);
+						var existingBackground = db.WebCacheResources
+							.FirstOrDefault(r => r.WebCache.ReleaseKey == releaseKey && r.WebCache.UserId == userId && r.WebCacheResourceTypeId == WebCacheResourceType.Background);
 						if (existingBackground == null)
 						{
+							var webCache = db.WebCache.FirstOrDefault(r => r.ReleaseKey == releaseKey && r.UserId == userId);
+							if (webCache == null)
+							{
+								webCache = db.Add(new WebCache
+								{
+									ReleaseKey = releaseKey,
+									UserId = userId,
+								}).Entity;
+							}
 							db.WebCacheResources.Add(new WebCacheResources
 							{
-								ReleaseKey = releaseKey,
-								UserId = userId,
+								WebCacheId = webCache.Id,
 								WebCacheResourceTypeId = WebCacheResourceType.Background,
 								Filename = filename,
 							});
+
 						}
 						else
 						{
@@ -244,16 +262,26 @@ namespace GogGalaxy20MetaManager
 					}
 					using (var db = new GalaxyDb())
 					{
-						var existingIcon = db.WebCacheResources.FirstOrDefault(r => r.ReleaseKey == releaseKey && r.UserId == userId && r.WebCacheResourceTypeId == WebCacheResourceType.SquareIcon);
+						var existingIcon = db.WebCacheResources
+							.FirstOrDefault(r => r.WebCache.ReleaseKey == releaseKey && r.WebCache.UserId == userId && r.WebCacheResourceTypeId == WebCacheResourceType.SquareIcon);
 						if (existingIcon == null)
 						{
+							var webCache = db.WebCache.FirstOrDefault(r => r.ReleaseKey == releaseKey && r.UserId == userId);
+							if (webCache == null)
+							{
+								webCache = db.Add(new WebCache
+								{
+									ReleaseKey = releaseKey,
+									UserId = userId,
+								}).Entity;
+							}
 							db.WebCacheResources.Add(new WebCacheResources
 							{
-								ReleaseKey = releaseKey,
-								UserId = userId,
+								WebCacheId = webCache.Id,
 								WebCacheResourceTypeId = WebCacheResourceType.SquareIcon,
 								Filename = filename,
 							});
+
 						}
 						else
 						{

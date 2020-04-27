@@ -24,5 +24,7 @@
         OriginalMeta = 55848,
         Changelog = 68215,
         Goodies = 68216,
+        SortingTitle = 114697,
+        OriginalSortingTitle = 114700,
     }
 }

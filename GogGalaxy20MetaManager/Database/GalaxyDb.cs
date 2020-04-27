@@ -7,6 +7,7 @@ namespace GogGalaxy20MetaManager
 	public class GalaxyDb: DbContext
 	{
 		public DbSet<WebCacheResources> WebCacheResources { get; set; }
+		public DbSet<WebCache> WebCache { get; set; }
 		public DbSet<GamePieces> GamePieces { get; set; }
 		public DbSet<Users> Users { get; set; }
 
@@ -21,7 +22,12 @@ namespace GogGalaxy20MetaManager
 		{
 			modelBuilder.Entity<Users>().HasKey(u => u.Id);
 			modelBuilder.Entity<GamePieces>().HasKey(p => new {p.ReleaseKey, p.GamePieceTypeId, p.UserId});
-			modelBuilder.Entity<WebCacheResources>().HasKey(r => new {r.ReleaseKey, r.WebCacheResourceTypeId, r.UserId });
+			modelBuilder.Entity<WebCache>().HasKey(r => r.Id);
+			modelBuilder.Entity<WebCache>().HasIndex(r => new {r.ReleaseKey, r.UserId}).IsUnique();
+			modelBuilder.Entity<WebCacheResources>().HasKey(r => new {r.WebCacheId, r.WebCacheResourceTypeId});
+			modelBuilder.Entity<WebCacheResources>().HasOne(r => r.WebCache);
+			//modelBuilder.Entity<WebCacheResources>().HasNoKey();
+			//modelBuilder.Entity<WebCacheResources>().HasIndex(r => new {r.WebCacheId, r.WebCacheResourceTypeId}).IsUnique();
 
 			foreach (var entity in modelBuilder.Model.GetEntityTypes())
 			foreach (var property in entity.GetProperties())

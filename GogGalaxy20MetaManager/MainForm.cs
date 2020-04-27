@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Text;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
@@ -109,7 +110,14 @@ namespace GogGalaxy20MetaManager
 			var coverFilenames = new Dictionary<string, string>(metaInfo.Count);
 			using (var db = new GalaxyDb())
 			{
-				foreach (var cover in db.WebCacheResources.AsNoTracking().Where(r => r.WebCacheResourceTypeId == WebCacheResourceType.VerticalCover).ToListAsync().GetAwaiter().GetResult())
+				var covers = db.WebCacheResources
+					.AsNoTracking()
+					.Where(r => r.WebCacheResourceTypeId == WebCacheResourceType.VerticalCover)
+					.Include(r => r.WebCache)
+					.ToListAsync()
+					.GetAwaiter()
+					.GetResult();
+				foreach (var cover in covers)
 				{
 					if (aborted)
 						break;
@@ -120,10 +128,10 @@ namespace GogGalaxy20MetaManager
 						Application.DoEvents();
 					}
 
-					if (!metaInfo.ContainsKey(cover.ReleaseKey))
+					if (!metaInfo.ContainsKey(cover.WebCache.ReleaseKey))
 						continue;
 
-					coverFilenames[cover.ReleaseKey] = cover.Filename;
+					coverFilenames[cover.WebCache.ReleaseKey] = cover.Filename;
 				}
 			}
 			Application.DoEvents();
@@ -180,6 +188,7 @@ namespace GogGalaxy20MetaManager
 							DropShadow = true,
 							FontColor = ForeColor,
 							FontSize = Font.Height * 3,
+							FontFamily = new FontFamily("Yu Gothic", new InstalledFontCollection()),
 							Text = title.Value,
 						};
 						var bitmap = new Bitmap(342, 482);

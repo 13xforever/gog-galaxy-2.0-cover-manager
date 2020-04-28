@@ -31,7 +31,7 @@ namespace GogGalaxy20MetaManager
 			InitializeComponent();
 
 			OnPaint = () => parent.UpdateColors(this);
-			onColorChanged = (_uiSettings, _obj) => Invoke(OnPaint);
+			onColorChanged = (_, __) => Invoke(OnPaint);
 			if (parent.uiSettings != null)
 				parent.uiSettings.ColorValuesChanged += onColorChanged;
 		}

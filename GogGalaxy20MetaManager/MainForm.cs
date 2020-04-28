@@ -137,70 +137,89 @@ namespace GogGalaxy20MetaManager
 			Application.DoEvents();
 
 			var pictureBoxList = new List<Control>(titles.Count);
-			using (var imgFactory = new ImageProcessor.ImageFactory())
+			var rootFolder = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+			galaxyRootPath = Path.Combine(rootFolder, "GOG.com", "Galaxy", "webcache", userId.ToString());
+			progressBar1.Style = ProgressBarStyle.Continuous;
+			progressBar1.Maximum = titles.Count * 2;
+			foreach (var title in titles.OrderBy(kvp => kvp.Value))
 			{
-				var rootFolder = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-				galaxyRootPath = Path.Combine(rootFolder, "GOG.com", "Galaxy", "webcache", userId.ToString());
-				progressBar1.Style = ProgressBarStyle.Continuous;
-				progressBar1.Maximum = titles.Count*2;
-				foreach (var title in titles.OrderBy(kvp => kvp.Value))
+				if (aborted)
+					break;
+
+				if (timer.Elapsed > timerThreshold)
 				{
-					if (aborted)
-						break;
-
-					if (timer.Elapsed > timerThreshold)
-					{
-						timer.Restart();
-						Application.DoEvents();
-					}
-
-					var keyParts = title.Key.Split(Separator, 2);
-					var pictureBox = new PictureBox
-					{
-						SizeMode = PictureBoxSizeMode.Zoom,
-						Size = new Size(171, 241), // 342x482, ~5:7
-					};
-					pictureBox.Click += (s, args) =>
-										{
-											var editForm = new CoverEditForm(this, pictureBox, title.Key, userId)
-											{
-												Text = $"Editing \"{title.Value}\" ({keyParts[1]})",
-											};
-											var result = editForm.ShowDialog(this);
-										};
-					if (coverFilenames.TryGetValue(title.Key, out var filename))
-					{
-						var path = Path.Combine(galaxyRootPath, keyParts[0], keyParts[1], filename);
-						if (File.Exists(path))
-							try
-							{
-								using (var img = imgFactory.Load(path))
-									pictureBox.Image = (Image)img.Image.Clone();
-							}
-							catch
-							{
-							}
-					}
-					if (pictureBox.Image == null)
-					{
-						var text = new TextLayer
-						{
-							DropShadow = true,
-							FontColor = ForeColor,
-							FontSize = Font.Height * 3,
-							FontFamily = new FontFamily("Yu Gothic", new InstalledFontCollection()),
-							Text = title.Value,
-						};
-						var bitmap = new Bitmap(342, 482);
-						using (var img = imgFactory.Load(bitmap)
-							.BackgroundColor(BackColor)
-							.Watermark(text))
-							pictureBox.Image = (Image)img.Image.Clone();
-					}
-					pictureBoxList.Add(pictureBox);
-					toolTip1.SetToolTip(pictureBox, title.Value);
-					progressBar1.Value++;
+					timer.Restart();
+					Application.DoEvents();
 				}
+
+				var keyParts = title.Key.Split(Separator, 2);
+				var pictureBox = new PictureBox
+				{
+					SizeMode = PictureBoxSizeMode.Zoom,
+					Size = new Size(171, 241), // 342x482, ~5:7
+				};
+				pictureBox.Click += (s, args) =>
+									{
+										var editForm = new CoverEditForm(this, pictureBox, title.Key, userId)
+										{
+											Text = $"Editing \"{title.Value}\" ({keyParts[1]})",
+										};
+										editForm.ShowDialog(this);
+									};
+				var imageLoaded = false;
+				pictureBox.LocationChanged += (obj, evtArgs) =>
+											{
+												var pictureBoxRect = pictureBox.ClientRectangle;
+												pictureBoxRect.Offset(pictureBox.Location);
+												if (flowLayoutPanel1.ClientRectangle.IntersectsWith(pictureBoxRect))
+												{
+													// image enters visible area
+													if (imageLoaded)
+														return;
+
+													using var imgFactory = new ImageProcessor.ImageFactory();
+													if (coverFilenames.TryGetValue(title.Key, out var filename))
+													{
+														var path = Path.Combine(galaxyRootPath, keyParts[0], keyParts[1], filename);
+														if (File.Exists(path))
+															try
+															{
+																using var img = imgFactory.Load(path);
+																pictureBox.Image = (Image)img.Image.Clone();
+															}
+															catch
+															{
+															}
+													}
+													if (pictureBox.Image == null)
+													{
+														var text = new TextLayer
+														{
+															DropShadow = true,
+															FontColor = ForeColor,
+															FontSize = Font.Height * 3,
+															FontFamily = new FontFamily("Yu Gothic", new InstalledFontCollection()),
+															Text = title.Value,
+														};
+														var bitmap = new Bitmap(342, 482);
+														using var img = imgFactory.Load(bitmap).BackgroundColor(BackColor).Watermark(text);
+														pictureBox.Image = (Image)img.Image.Clone();
+													}
+													imageLoaded = true;
+												}
+												else
+												{
+													// image leaves visible area
+													if (imageLoaded)
+													{
+														pictureBox.Image = null;
+														imageLoaded = false;
+													}
+												}
+											};
+				pictureBoxList.Add(pictureBox);
+				toolTip1.SetToolTip(pictureBox, title.Value);
+				progressBar1.Value++;
 			}
 			var range = pictureBoxList.ToArray().AsSpan();
 			while (!range.IsEmpty)

@@ -5,13 +5,13 @@ using System.Drawing;
 using System.Drawing.Text;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Windows.Forms;
 using Windows.UI.ViewManagement;
 using ImageProcessor.Imaging;
 using Microsoft.DotNet.PlatformAbstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Win32;
-using Newtonsoft.Json;
 
 namespace GogGalaxy20MetaManager
 {
@@ -24,6 +24,11 @@ namespace GogGalaxy20MetaManager
 		internal readonly string steamRootPath;
 		internal string galaxyRootPath;
 		internal static readonly char[] Separator = { '_' };
+
+		private static readonly JsonSerializerOptions options = new()
+		{
+			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+		};
 
 		public MainForm()
 		{
@@ -86,21 +91,29 @@ namespace GogGalaxy20MetaManager
 
 					var isVisible = db.GamePieces.Where(p => p.ReleaseKey == meta.ReleaseKey && p.GamePieceTypeId == GamePieceType.IsVisibleInLibrary).Select(p => p.Value).FirstOrDefaultAsync().GetAwaiter().GetResult();
 					if (!string.IsNullOrEmpty(isVisible)
-						&& JsonConvert.DeserializeObject<GamePiecesIsVisibleInLibrary>(isVisible).IsVisibleInLibrary == false)
+						&& JsonSerializer.Deserialize<GamePiecesIsVisibleInLibrary>(isVisible, options)?.IsVisibleInLibrary == false)
 						continue;
 
 					var isDlc = db.GamePieces.Where(p => p.ReleaseKey == meta.ReleaseKey && p.GamePieceTypeId == GamePieceType.IsDlc).Select(p => p.Value).FirstOrDefaultAsync().GetAwaiter().GetResult();
 					if (!string.IsNullOrEmpty(isDlc)
-						&& JsonConvert.DeserializeObject<GamePiecesIsDlc>(isDlc).IsDlc == true)
+						&& JsonSerializer.Deserialize<GamePiecesIsDlc>(isDlc, options)?.IsDlc == true)
 						continue;
 
-					metaInfo[meta.ReleaseKey] = JsonConvert.DeserializeObject<GamePiecesMeta>(meta.Value);
+					try
+					{
+						metaInfo[meta.ReleaseKey] = JsonSerializer.Deserialize<GamePiecesMeta>(meta.Value, options);
+					}
+					catch (Exception ex)
+					{
+						if (ex.GetType() == typeof(JsonException))
+							throw new InvalidDataException("Failed to deserialize json: " + meta.Value, ex);
+					}
 
 					// title
 					var title = db.GamePieces.FirstOrDefaultAsync(p => p.ReleaseKey == meta.ReleaseKey && p.GamePieceTypeId == GamePieceType.Title && p.Value != null).GetAwaiter().GetResult()?.Value
 									?? db.GamePieces.FirstOrDefaultAsync(p => p.ReleaseKey == meta.ReleaseKey && p.GamePieceTypeId == GamePieceType.OriginalTitle && p.Value != null).GetAwaiter().GetResult()?.Value;
 					if (!string.IsNullOrEmpty(title))
-						title = JsonConvert.DeserializeObject<GamePiecesTitle>(title).Title;
+						title = JsonSerializer.Deserialize<GamePiecesTitle>(title, options)?.Title;
 					if (string.IsNullOrEmpty(title))
 						title = meta.ReleaseKey;
 					titles[meta.ReleaseKey] = title;

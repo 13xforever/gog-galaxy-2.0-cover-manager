@@ -20,7 +20,7 @@ namespace GogGalaxy20MetaManager
 		private bool aborted;
 		internal readonly UISettings uiSettings;
 		internal delegate void OnPaintDelegate();
-		private OnPaintDelegate OnPaint;
+		private OnPaintDelegate OnRepaint;
 		internal readonly string steamRootPath;
 		internal string galaxyRootPath;
 		internal static readonly char[] Separator = { '_' };
@@ -34,13 +34,13 @@ namespace GogGalaxy20MetaManager
 		{
 			InitializeComponent();
 
-			OnPaint = () => UpdateColors(this);
+			OnRepaint = () => UpdateColors(this);
 			if (RuntimeEnvironment.OperatingSystemPlatform == Platform.Windows
 				&& Version.TryParse(RuntimeEnvironment.OperatingSystemVersion, out var systemVersion)
 				&& systemVersion.Major == 10)
 			{
 				uiSettings = new UISettings();
-				uiSettings.ColorValuesChanged += (_uiSettings, _obj) => Invoke(OnPaint);
+				uiSettings.ColorValuesChanged += (_uiSettings, _obj) => Invoke(OnRepaint);
 			}
 			if (RuntimeEnvironment.OperatingSystemPlatform == Platform.Windows)
 			{

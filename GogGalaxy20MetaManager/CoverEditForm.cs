@@ -13,7 +13,7 @@ namespace GogGalaxy20MetaManager
 {
 	public partial class CoverEditForm : Form
 	{
-		private MainForm.OnPaintDelegate OnPaint;
+		private MainForm.OnPaintDelegate OnRepaint;
 
 		private readonly MainForm parent;
 		private readonly PictureBox pictureBox;
@@ -30,8 +30,8 @@ namespace GogGalaxy20MetaManager
 
 			InitializeComponent();
 
-			OnPaint = () => parent.UpdateColors(this);
-			onColorChanged = (_, __) => Invoke(OnPaint);
+			OnRepaint = () => parent.UpdateColors(this);
+			onColorChanged = (_, __) => Invoke(OnRepaint);
 			if (parent.uiSettings != null)
 				parent.uiSettings.ColorValuesChanged += onColorChanged;
 		}
